@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3"><dataSet config="1.0.294-SNAPSHOT"><source path="/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/assets"/></dataSet><dataSet config="debug"><source path="/Users/owner/Desktop/Tego/utils/build/intermediates/bundles/debug/assets"/></dataSet><dataSet config="main"><source path="/Users/owner/Desktop/Tego/utils/src/androidTest/assets"/><source path="/Users/owner/Desktop/Tego/utils/build/generated/assets/shaders/androidTest/debug"/></dataSet></merger>

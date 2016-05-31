@@ -1,0 +1,42 @@
+[
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/sepia_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/sepia_fragment_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/blend_add_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/blend_add_fragment_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/fog_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/fog_fragment_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/minimal_vertex_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/minimal_vertex_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/copy_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/copy_fragment_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/vignette_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/vignette_fragment_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/grey_scale_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/grey_scale_fragment_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/color_threshold_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/color_threshold_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/blur_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/blur_fragment_shader.glsl"
+    },
+    {
+        "merged": "/Users/owner/Desktop/Tego/utils/build/intermediates/res/merged/androidTest/debug/raw/blend_screen_fragment_shader.glsl",
+        "source": "/Users/owner/Desktop/Tego/utils/build/intermediates/exploded-aar/org.rajawali3d/rajawali/1.0.294-SNAPSHOT/res/raw/blend_screen_fragment_shader.glsl"
+    }
+]

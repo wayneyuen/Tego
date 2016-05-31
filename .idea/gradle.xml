@@ -10,6 +10,8 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/dbusjava" />
+            <option value="$PROJECT_DIR$/ev3classes" />
             <option value="$PROJECT_DIR$/utils" />
           </set>
         </option>
@@ -17,6 +19,8 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/dbusjava" />
+            <option value="$PROJECT_DIR$/ev3classes" />
             <option value="$PROJECT_DIR$/utils" />
           </set>
         </option>

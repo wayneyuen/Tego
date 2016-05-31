@@ -5,9 +5,9 @@ android {
     buildToolsVersion "21.1.2"
 
     defaultConfig {
-        minSdkVersion 17
-        targetSdkVersion 19
-    }
+    minSdkVersion 17
+    targetSdkVersion 19
+}
 
     buildTypes {
         release {
@@ -18,6 +18,8 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'org.rajawali3d:rajawali:1.0.294-SNAPSHOT@aar'
+    compile project(':ev3classes')
+    compile project(':dbusjava')
 }

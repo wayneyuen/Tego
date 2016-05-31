@@ -2,6 +2,7 @@ package uic.edu.hk.tego;
 
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -25,7 +26,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import org.rajawali3d.math.vector.Vector2;
 
-import java.nio.FloatBuffer;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,6 +34,9 @@ import java.util.List;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import lejos.remote.ev3.RemoteRequestEV3;
+import lejos.remote.ev3.RemoteRequestPilot;
+import lejos.robotics.RegulatedMotor;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -75,18 +79,25 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.navigateBtn)
     void navigate() {
-        isNavigate = true;
+        isSettingupNavigation = true;
     }
+
+    private RemoteRequestEV3 mEV3;
+    private RemoteRequestPilot mPilot;
+    private RegulatedMotor mLeftMotor;
+    private RegulatedMotor mRightMotor;
 
     private Tango mTango;
     private TangoConfig mConfig;
 
     private QuadTree mData;
+    private List<Vector2> mPath;
     private Vector2 mStartPoint;
     private Vector2 mEndPoint;
 
     private boolean isTag = false;
-    private boolean isNavigate = false;
+    private boolean isSettingupNavigation = false;
+    private boolean isNavigating = false;
 
     public static final int QUAD_TREE_START = -60;
     public static final int QUAD_TREE_RANGE = 120;
@@ -135,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
 
                 mCamera.connectToTangoCamera(mTango,
-                        TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                        TangoCameraIntrinsics.TANGO_CAMERA_FISHEYE);
 
                 mConfig = setupTangoConfig(mTango);
 
@@ -178,7 +189,6 @@ public class MainActivity extends AppCompatActivity {
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
-        config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
 
         ArrayList<String> fullUuidList;
         // Returns a list of ADFs with their UUIDs
@@ -237,47 +247,35 @@ public class MainActivity extends AppCompatActivity {
                     });
 
                     if (isTag) {
-                        setEndPoint(tangoPoseData);
-                        final float translations[] = tangoPoseData.getTranslationAsFloats();
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mEndPointLabel.setText(Arrays.toString(translations));
-                                mNavigateBtn.setEnabled(true);
-                            }
-                        });
-                        isTag = false;
+                        tagLocation(tangoPoseData);
                     }
 
-                    if (isNavigate) {
-                        setStartPoint(tangoPoseData);
-                        if (mStartPoint != null
-                                && mEndPoint != null) {
-                            PathFinder finder = new PathFinder(mData);
-                            try {
-                                List<Vector2> path = finder.findPathBetween(mStartPoint, mEndPoint);
-                                for (Vector2 point : path) {
-                                    Log.i(TAG, point.getX() + ", " + point.getY());
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+                    if (isSettingupNavigation) {
+                        setupNavigation(tangoPoseData);
+                    }
+
+                    if (isNavigating) {
+                        try {
+                            new Control().execute("up");
+                            Thread.sleep(1000);
+                            new Control().execute("stop");
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                         }
-                        isNavigate = false;
+
+                        new Connection().execute("disconnect");
+                        isNavigating = false;
                     }
                 }
             }
 
             @Override
             public void onXyzIjAvailable(TangoXyzIjData tangoXyzIjData) {
-//                logXyzIj(tangoXyzIjData);
             }
 
             @Override
             public void onFrameAvailable(int i) {
-                // Check if the frame available is for the camera we want and
-                // update its frame on the camera preview.
-                if (i == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
+                if (i == TangoCameraIntrinsics.TANGO_CAMERA_FISHEYE) {
                     mCamera.onFrameAvailable();
                 }
             }
@@ -347,19 +345,102 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Calculates the average depth from a point cloud buffer.
-     */
-    private float calculateAverageDepth(FloatBuffer pointCloudBuffer) {
-        int pointCount = pointCloudBuffer.capacity() / 3;
-        float totalZ = 0;
-        float averageZ = 0;
-        for (int i = 0; i < pointCloudBuffer.capacity() - 3; i = i + 3) {
-            totalZ = totalZ + pointCloudBuffer.get(i + 2);
+    private class Connection extends AsyncTask<String, Integer, Integer> {
+        @Override
+        protected Integer doInBackground(String... params) {
+            if (params[0].equals("connect")) {
+                try {
+                    mEV3 = new RemoteRequestEV3(params[1]);
+                    mLeftMotor = mEV3.createRegulatedMotor("A", 'L');
+                    mRightMotor = mEV3.createRegulatedMotor("D", 'L');
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else if (params[0].equals("disconnect")) {
+                mLeftMotor.close();
+                mRightMotor.close();
+                mEV3.disConnect();
+                mEV3 = null;
+            }
+
+            return -1;
         }
-        if (pointCount != 0) {
-            averageZ = totalZ / pointCount;
+    }
+
+    private class Control extends AsyncTask<String, Integer, Integer> {
+        @Override
+        protected Integer doInBackground(String... params) {
+            if (params[0].equals("up")) {
+                mLeftMotor.forward();
+                mRightMotor.forward();
+            } else if (params[0].equals("back")) {
+                mLeftMotor.backward();
+                mRightMotor.backward();
+            } else if (params[0].equals("right")) {
+                mLeftMotor.forward();
+                mRightMotor.stop(true);
+            } else if (params[0].equals("left")) {
+                mLeftMotor.stop(true);
+                mRightMotor.forward();
+            } else if (params[0].equals("stop")) {
+                mLeftMotor.stop(true);
+                mRightMotor.stop(true);
+            }
+
+            return -1;
         }
-        return averageZ;
+    }
+
+    private void tagLocation(TangoPoseData tangoPoseData) {
+        setEndPoint(tangoPoseData);
+        final float translations[] = tangoPoseData.getTranslationAsFloats();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mEndPointLabel.setText(Arrays.toString(translations));
+                mNavigateBtn.setEnabled(true);
+            }
+        });
+        isTag = false;
+    }
+
+    private void setupNavigation(TangoPoseData tangoPoseData) {
+        setStartPoint(tangoPoseData);
+        if (mStartPoint != null
+                && mEndPoint != null) {
+            PathFinder finder = new PathFinder(mData);
+            try {
+                mPath = finder.findPathBetween(mStartPoint, mEndPoint);
+                for (Vector2 point : mPath) {
+                    Log.i(TAG, point.getX() + ", " + point.getY());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            new Connection().execute("connect", "192.168.43.151");
+            isNavigating = true;
+        }
+        isSettingupNavigation = false;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

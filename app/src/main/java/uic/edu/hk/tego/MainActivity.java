@@ -1,11 +1,16 @@
 package uic.edu.hk.tego;
 
 
+import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -26,7 +31,6 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import org.rajawali3d.math.vector.Vector2;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,11 +38,9 @@ import java.util.List;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-import lejos.remote.ev3.RemoteRequestEV3;
-import lejos.remote.ev3.RemoteRequestPilot;
-import lejos.robotics.RegulatedMotor;
+import butterknife.OnTouch;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     // Permission request action
     public static final int REQUEST_CODE_TANGO_PERMISSION = 0;
@@ -69,6 +71,9 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.endPointLabel)
     TextView mEndPointLabel;
 
+    @BindView(R.id.angleLabel)
+    TextView mAngleLabel;
+
     @BindView(R.id.navigateBtn)
     Button mNavigateBtn;
 
@@ -82,22 +87,94 @@ public class MainActivity extends AppCompatActivity {
         isSettingupNavigation = true;
     }
 
-    private RemoteRequestEV3 mEV3;
-    private RemoteRequestPilot mPilot;
-    private RegulatedMotor mLeftMotor;
-    private RegulatedMotor mRightMotor;
+    @OnClick(R.id.rotateBtn)
+    void rotate() {
+        isRotating = true;
+    }
+
+    @OnClick(R.id.connectBtn)
+    void connect() {
+        mLego = new LegoControl();
+        mLego.connect();
+    }
+
+    @OnClick(R.id.disconnectBtn)
+    void disconnect() {
+        mLego.disconnect();
+        mLego = null;
+    }
+
+    @OnTouch(R.id.upBtn)
+    boolean up(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                mLego.up();
+                return true;
+            case MotionEvent.ACTION_UP:
+                mLego.stop();
+                return false;
+        }
+        return false;
+    }
+
+    @OnTouch(R.id.backBtn)
+    boolean back(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                mLego.back();
+                return true;
+            case MotionEvent.ACTION_UP:
+                mLego.stop();
+                return false;
+        }
+        return false;
+    }
+
+    @OnTouch(R.id.leftBtn)
+    boolean left(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                mLego.left();
+                return true;
+            case MotionEvent.ACTION_UP:
+                mLego.stop();
+                return false;
+        }
+        return false;
+    }
+
+    @OnTouch(R.id.rightBtn)
+    boolean right(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                mLego.right();
+                return true;
+            case MotionEvent.ACTION_UP:
+                mLego.stop();
+                return false;
+        }
+        return false;
+    }
 
     private Tango mTango;
     private TangoConfig mConfig;
+
+    private LegoControl mLego;
 
     private QuadTree mData;
     private List<Vector2> mPath;
     private Vector2 mStartPoint;
     private Vector2 mEndPoint;
 
+    private Float mStartAngle;
+
     private boolean isTag = false;
     private boolean isSettingupNavigation = false;
     private boolean isNavigating = false;
+    private boolean isRotating = false;
+
+    private SensorManager mSensorManager;
+    private Sensor mOrientationSensor;
 
     public static final int QUAD_TREE_START = -60;
     public static final int QUAD_TREE_RANGE = 120;
@@ -108,6 +185,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mData = new QuadTree(new Vector2(QUAD_TREE_START, QUAD_TREE_START), QUAD_TREE_RANGE, 8);
+
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mOrientationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
 
         ButterKnife.bind(this);
 
@@ -137,6 +217,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        mSensorManager.registerListener(
+                this,
+                mOrientationSensor,
+                SensorManager.SENSOR_DELAY_NORMAL);
 
         // Initialize Tango Service as a normal Android Service, since we call
         // mTango.disconnect() in onPause, this will unbind Tango Service, so
@@ -173,6 +258,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+
+        mSensorManager.unregisterListener(this);
+
         try {
             mTango.disconnect();
             mCamera.disconnectFromTangoCamera();
@@ -181,10 +269,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Sets up the tango configuration object. Make sure mTango object is initialized before
-     * making this call.
-     */
     private TangoConfig setupTangoConfig(Tango tango) {
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
@@ -215,10 +299,6 @@ public class MainActivity extends AppCompatActivity {
         return config;
     }
 
-    /**
-     * Set up the callback listeners for the Tango service, then begin using the Motion
-     * Tracking API. This is called in response to the user clicking the 'Start' Button.
-     */
     private void setTangoListeners() {
         final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<>();
         framePairs.add(new TangoCoordinateFramePair(
@@ -255,16 +335,6 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     if (isNavigating) {
-                        try {
-                            new Control().execute("up");
-                            Thread.sleep(1000);
-                            new Control().execute("stop");
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-                        new Connection().execute("disconnect");
-                        isNavigating = false;
                     }
                 }
             }
@@ -309,12 +379,6 @@ public class MainActivity extends AppCompatActivity {
         mEndPoint = new Vector2(x, y);
     }
 
-    /**
-     * Log the Position and Orientation of the given pose
-     * in the Logcat as information.
-     *
-     * @param pose the pose to log.
-     */
     private void logPose(TangoPoseData pose) {
         StringBuilder stringBuilder = new StringBuilder();
         final float translations[] = pose.getTranslationAsFloats();
@@ -345,53 +409,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private class Connection extends AsyncTask<String, Integer, Integer> {
-        @Override
-        protected Integer doInBackground(String... params) {
-            if (params[0].equals("connect")) {
-                try {
-                    mEV3 = new RemoteRequestEV3(params[1]);
-                    mLeftMotor = mEV3.createRegulatedMotor("A", 'L');
-                    mRightMotor = mEV3.createRegulatedMotor("D", 'L');
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } else if (params[0].equals("disconnect")) {
-                mLeftMotor.close();
-                mRightMotor.close();
-                mEV3.disConnect();
-                mEV3 = null;
-            }
-
-            return -1;
-        }
-    }
-
-    private class Control extends AsyncTask<String, Integer, Integer> {
-        @Override
-        protected Integer doInBackground(String... params) {
-            if (params[0].equals("up")) {
-                mLeftMotor.forward();
-                mRightMotor.forward();
-            } else if (params[0].equals("back")) {
-                mLeftMotor.backward();
-                mRightMotor.backward();
-            } else if (params[0].equals("right")) {
-                mLeftMotor.forward();
-                mRightMotor.stop(true);
-            } else if (params[0].equals("left")) {
-                mLeftMotor.stop(true);
-                mRightMotor.forward();
-            } else if (params[0].equals("stop")) {
-                mLeftMotor.stop(true);
-                mRightMotor.stop(true);
-            }
-
-            return -1;
-        }
-    }
-
     private void tagLocation(TangoPoseData tangoPoseData) {
         setEndPoint(tangoPoseData);
         final float translations[] = tangoPoseData.getTranslationAsFloats();
@@ -418,11 +435,42 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            new Connection().execute("connect", "192.168.43.151");
             isNavigating = true;
         }
         isSettingupNavigation = false;
     }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+
+        mAngleLabel.setText(event.values[0] + "");
+
+        if (isRotating) {
+//            if (mStartAngle == null) {
+//                mStartAngle = event.values[0];
+//                mLego.right();
+//            } else {
+//                float difference = event.values[0] - mStartAngle;
+//                Log.i(TAG, "Origin: " + mStartAngle + ", " +
+//                        "Now: " + event.values[0] + ", " +
+//                        "Difference: " + difference);
+//                if (difference > 173 && difference < 174) {
+//                    Log.d(TAG, "STOP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+//                    mLego.stop();
+//                    isRotating = false;
+//                    mStartAngle = null;
+//                }
+//            }
+            mLego.rotate(90);
+            isRotating = false;
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
 }
 
 

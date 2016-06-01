@@ -47,7 +47,11 @@ public class LegoControl {
     }
 
     public void rotate(int angle) {
-        new Rotation().execute(angle);
+        new Rotation().execute(-angle);
+    }
+
+    public void travel(int cm) {
+        new Travel().execute(cm);
     }
 
     private class Connection extends AsyncTask<String, Integer, Integer> {
@@ -128,7 +132,20 @@ public class LegoControl {
 
         @Override
         protected Integer doInBackground(Integer... params) {
+            isMoving = true;
             mPilot.rotate(params[0]);
+            isMoving = false;
+            return -1;
+        }
+    }
+
+    private class Travel extends AsyncTask<Integer, Integer, Integer> {
+
+        @Override
+        protected Integer doInBackground(Integer... params) {
+            isMoving = true;
+            mPilot.travel(20);
+            isMoving = false;
             return -1;
         }
     }
